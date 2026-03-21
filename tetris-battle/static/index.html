@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tetris Battle</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1 class="logo">TETRIS<span>BATTLE</span></h1>
+    <div class="lang-switcher">
+      <button onclick="setLang('es')" id="btn-es" class="lang-btn active">
+        <span class="flag">🇪🇸</span> ES
+      </button>
+      <button onclick="setLang('en')" id="btn-en" class="lang-btn">
+        <span class="flag">🇬🇧</span> EN
+      </button>
+    </div>
+  </header>
+
+  <main class="lobby">
+    <div class="card" id="section-create">
+      <h2 data-i18n="create_title">Crear partida</h2>
+      <p data-i18n="create_desc">Crea una sala y comparte el código con tu rival.</p>
+      <input type="text" id="create-name" maxlength="20" placeholder="" data-i18n-placeholder="name_placeholder" />
+      <button class="btn-primary" onclick="createRoom()" data-i18n="create_btn">Crear sala</button>
+      <div id="room-code-box" class="hidden">
+        <p data-i18n="share_code">Comparte este código:</p>
+        <div class="code-display" id="code-display"></div>
+        <p class="waiting-msg" data-i18n="waiting_opponent">Esperando al rival...</p>
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <div class="divider"><span data-i18n="or">o</span></div>
+
+    <div class="card" id="section-join">
+      <h2 data-i18n="join_title">Unirse a partida</h2>
+      <p data-i18n="join_desc">Introduce el código que te pasó tu rival.</p>
+      <input type="text" id="join-name" maxlength="20" placeholder="" data-i18n-placeholder="name_placeholder" />
+      <input type="text" id="join-code" maxlength="6" placeholder="ABC123" class="code-input" oninput="this.value=this.value.toUpperCase()" />
+      <button class="btn-secondary" onclick="joinRoom()" data-i18n="join_btn">Unirse</button>
+    </div>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/static/i18n.js"></script>
+  <script>
+    // Read saved lang
+    const savedLang = localStorage.getItem('lang') || 'es';
+    setLang(savedLang);
+
+    let ws = null;
+
+    function setLang(lang) {
+      localStorage.setItem('lang', lang);
+      document.documentElement.lang = lang;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (LANG[lang] && LANG[lang][key]) el.textContent = LANG[lang][key];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.dataset.i18nPlaceholder;
+        if (LANG[lang] && LANG[lang][key]) el.placeholder = LANG[lang][key];
+      });
+      document.getElementById('btn-es').classList.toggle('active', lang === 'es');
+      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    }
+
+    function showToast(msg, type = 'error') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = `toast ${type}`;
+      setTimeout(() => t.classList.add('hidden'), 3000);
+    }
+
+    async function createRoom() {
+      const name = document.getElementById('create-name').value.trim();
+      const lang = localStorage.getItem('lang') || 'es';
+      if (!name) { showToast(LANG[lang].error_name); return; }
+
+      try {
+        const res = await fetch('/api/rooms', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ player_name: name })
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Error'); return; }
+
+        document.getElementById('code-display').textContent = data.code;
+        document.getElementById('room-code-box').classList.remove('hidden');
+        document.querySelector('#section-create .btn-primary').disabled = true;
+        document.getElementById('create-name').disabled = true;
+
+        connectWS(data.code, name, 1);
+      } catch (e) {
+        showToast('Error de red');
+      }
+    }
+
+    async function joinRoom() {
+      const name = document.getElementById('join-name').value.trim();
+      const code = document.getElementById('join-code').value.trim().toUpperCase();
+      const lang = localStorage.getItem('lang') || 'es';
+      if (!name) { showToast(LANG[lang].error_name); return; }
+      if (code.length !== 6) { showToast(LANG[lang].error_code); return; }
+
+      // Check room exists
+      try {
+        const res = await fetch(`/api/rooms/${code}`);
+        const data = await res.json();
+        if (!res.ok) { showToast(LANG[lang].error_room_not_found); return; }
+        if (data.state === 'playing' || data.state === 'finished') {
+          showToast(LANG[lang].error_room_full); return;
+        }
+        connectWS(code, name, 2);
+      } catch(e) {
+        showToast('Error de red');
+      }
+    }
+
+    function connectWS(code, name, slot) {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}/ws/${code}`);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'join', player_name: name }));
+      };
+
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'error') {
+          showToast(msg.msg);
+          ws.close();
+        } else if (msg.type === 'joined') {
+          // OK, wait for game_start
+        } else if (msg.type === 'game_start') {
+          // Navigate to game
+          sessionStorage.setItem('room_code', code);
+          sessionStorage.setItem('player_name', name);
+          sessionStorage.setItem('player_slot', msg.from_slot || slot);
+          sessionStorage.setItem('player1', msg.player1);
+          sessionStorage.setItem('player2', msg.player2);
+          ws.close(); // game.html opens its own WS
+          window.location.href = `/game?code=${code}&slot=${slot}&name=${encodeURIComponent(name)}`;
+        }
+      };
+
+      ws.onerror = () => showToast('WebSocket error');
+    }
+  </script>
+</body>
+</html>

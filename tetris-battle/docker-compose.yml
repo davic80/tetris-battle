@@ -1,0 +1,27 @@
+services:
+  tetris-battle:
+    image: ghcr.io/davic80/tetris-battle:latest
+    container_name: tetris-battle
+    restart: unless-stopped
+    ports:
+      - "8642:8642"
+    environment:
+      PORT: "8642"
+      DB_PATH: "/app/data/tetris.db"
+      RUST_LOG: "info"
+    volumes:
+      - tetris-data:/app/data
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: tetris-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN}"
+    depends_on:
+      - tetris-battle
+
+volumes:
+  tetris-data:
+    driver: local
