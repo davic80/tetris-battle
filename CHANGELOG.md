@@ -1,0 +1,36 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.1] - 2026-03-22
+
+### Fixed
+- Repository root path: files were nested under an extra `tetris-battle/` subfolder in the initial commit; repo structure is now correct
+
+## [0.1.0] - 2026-03-22
+
+### Added
+- 2-player online Tetris with 6-character room code system
+- Rust game logic compiled to WebAssembly (SRS wall kicks, 7-bag randomizer)
+- Tetris Guideline scoring: single/double/triple/Tetris, back-to-back bonus, combo bonus
+- Garbage attack table: 2-player line-sending with cancellation mechanic
+- Axum WebSocket server: room creation, player slot assignment, broadcast relay
+- REST API: `POST /api/rooms`, `GET /api/rooms/:code`
+- SQLite match history persistence (room code, players, winner, timestamps)
+- ES / EN language selector with flag buttons
+- Mobile on-screen touch controls (8 buttons: move, rotate CW/CCW, soft drop, hard drop)
+- Desktop keyboard controls: arrow keys, Z (rotate CCW), Space (hard drop), DAS/ARR
+- Next-pieces preview panel (configurable: 0 / 1 / 4)
+- Ghost piece indicator
+- Garbage incoming bar with flash animation
+- Combo / Tetris text display
+- 3-2-1-GO countdown before match start
+- Game over + winner overlay with play-again / home buttons
+- Docker multi-arch image (`linux/amd64` + `linux/arm64/v8`) via GitHub Actions
+- Cloudflare Tunnel deployment support (Raspberry Pi)
+- `docker-compose.yml` with named SQLite volume
+
+[0.1.1]: https://github.com/davic80/tetris-battle/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/davic80/tetris-battle/releases/tag/v0.1.0

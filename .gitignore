@@ -1,0 +1,27 @@
+# Compiled output
+target/
+static/pkg/
+*.wasm
+
+# Rust
+**/*.rs.bk
+Cargo.lock
+
+# Environment
+.env
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

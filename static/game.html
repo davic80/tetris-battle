@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Tetris Battle – Partida</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="game-page">
+
+  <header>
+    <a href="/" class="logo-small">TETRIS<span>BATTLE</span></a>
+    <div class="lang-switcher">
+      <button onclick="setLang('es')" id="btn-es" class="lang-btn">
+        <span class="flag">🇪🇸</span> ES
+      </button>
+      <button onclick="setLang('en')" id="btn-en" class="lang-btn">
+        <span class="flag">🇬🇧</span> EN
+      </button>
+    </div>
+  </header>
+
+  <!-- Settings bar -->
+  <div class="settings-bar">
+    <label data-i18n="next_label">Siguientes:</label>
+    <select id="next-count" onchange="changeNextCount(this.value)">
+      <option value="0">0</option>
+      <option value="1">1</option>
+      <option value="4" selected>4</option>
+    </select>
+  </div>
+
+  <!-- Game arena -->
+  <div class="game-arena" id="game-arena">
+    <!-- My board (left/main) -->
+    <div class="player-panel" id="my-panel">
+      <div class="player-info">
+        <span class="player-name" id="my-name">Tú</span>
+        <span class="player-score"><span data-i18n="score">Puntos</span>: <span id="my-score">0</span></span>
+        <span class="player-level"><span data-i18n="level">Nivel</span>: <span id="my-level">1</span></span>
+        <span class="player-lines"><span data-i18n="lines">Líneas</span>: <span id="my-lines">0</span></span>
+      </div>
+      <div class="board-wrapper">
+        <!-- Garbage indicator -->
+        <div class="garbage-bar" id="my-garbage-bar"></div>
+        <canvas id="my-board" class="board-canvas" width="200" height="400"></canvas>
+      </div>
+      <div class="next-panel" id="my-next-panel">
+        <div class="next-label" data-i18n="next">NEXT</div>
+        <canvas id="my-next" width="80" height="320"></canvas>
+      </div>
+    </div>
+
+    <!-- VS divider -->
+    <div class="vs-divider">
+      <span>VS</span>
+      <div class="combo-display" id="combo-display"></div>
+    </div>
+
+    <!-- Opponent board (right/small) -->
+    <div class="player-panel opponent-panel" id="opp-panel">
+      <div class="player-info">
+        <span class="player-name" id="opp-name">Rival</span>
+        <span class="player-score"><span data-i18n="score">Puntos</span>: <span id="opp-score">0</span></span>
+        <span class="player-level"><span data-i18n="level">Nivel</span>: <span id="opp-level">1</span></span>
+      </div>
+      <div class="board-wrapper">
+        <div class="garbage-bar" id="opp-garbage-bar"></div>
+        <canvas id="opp-board" class="board-canvas opp-canvas" width="130" height="260"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Waiting overlay -->
+  <div class="overlay" id="overlay-waiting">
+    <div class="overlay-box">
+      <h2 data-i18n="waiting_opponent">Esperando al rival...</h2>
+      <div class="spinner"></div>
+      <p id="overlay-code-msg"></p>
+    </div>
+  </div>
+
+  <!-- Game over overlay -->
+  <div class="overlay hidden" id="overlay-result">
+    <div class="overlay-box">
+      <h2 id="result-title"></h2>
+      <p id="result-subtitle"></p>
+      <button class="btn-primary" onclick="playAgain()" data-i18n="play_again">Jugar de nuevo</button>
+      <button class="btn-secondary" onclick="goHome()" data-i18n="go_home">Inicio</button>
+    </div>
+  </div>
+
+  <!-- Countdown overlay -->
+  <div class="overlay hidden" id="overlay-countdown">
+    <div class="overlay-box countdown-box">
+      <div id="countdown-num" class="countdown-num">3</div>
+    </div>
+  </div>
+
+  <!-- Mobile controls -->
+  <div class="mobile-controls" id="mobile-controls">
+    <div class="mobile-row top-row">
+      <button class="ctrl-btn" id="btn-ccw" ontouchstart="ctrlPress('ccw')" ontouchend="ctrlRelease('ccw')">↺</button>
+      <button class="ctrl-btn" id="btn-up" ontouchstart="ctrlPress('up')" ontouchend="ctrlRelease('up')">⬆</button>
+      <button class="ctrl-btn" id="btn-cw" ontouchstart="ctrlPress('cw')" ontouchend="ctrlRelease('cw')">↻</button>
+    </div>
+    <div class="mobile-row bottom-row">
+      <button class="ctrl-btn" id="btn-left" ontouchstart="ctrlHold('left')" ontouchend="ctrlHoldRelease('left')">◀</button>
+      <button class="ctrl-btn" id="btn-down" ontouchstart="ctrlHold('down')" ontouchend="ctrlHoldRelease('down')">▼</button>
+      <button class="ctrl-btn" id="btn-right" ontouchstart="ctrlHold('right')" ontouchend="ctrlHoldRelease('right')">▶</button>
+      <button class="ctrl-btn ctrl-hard" id="btn-hard" ontouchstart="ctrlPress('hard')" ontouchend="ctrlRelease('hard')">⬇⬇</button>
+    </div>
+  </div>
+
+  <script src="/static/i18n.js"></script>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>
