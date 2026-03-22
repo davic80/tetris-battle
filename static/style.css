@@ -255,6 +255,112 @@ input[type="text"]:focus {
 .toast.success { background: #27ae60; color: #fff; }
 .toast.hidden  { opacity: 0; }
 
+/* ─── Game Options (lobby card) ──────────────────────────────────────────── */
+.game-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.option-row label {
+  flex: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.option-row select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Toggle checkbox styled as a switch */
+.toggle-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 36px;
+  height: 20px;
+  background: var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.toggle-check::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: left 0.2s;
+}
+
+.toggle-check:checked {
+  background: var(--accent);
+}
+
+.toggle-check:checked::after {
+  left: 19px;
+}
+
+/* ─── Code Actions (copy / share) ────────────────────────────────────────── */
+.code-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.btn-icon {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  transition: all 0.15s;
+}
+
+.btn-icon:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-icon-share {
+  background: var(--accent2);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.btn-icon-share:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
 /* ─── Game Page ───────────────────────────────────────────────────────────── */
 .game-page {
   display: flex;
@@ -266,28 +372,6 @@ input[type="text"]:focus {
 .game-page header {
   flex-shrink: 0;
   padding: 8px 16px;
-}
-
-/* ─── Settings Bar ────────────────────────────────────────────────────────── */
-.settings-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 16px;
-  background: var(--surface2);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  font-size: 12px;
-  color: var(--text-dim);
-}
-
-.settings-bar select {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 12px;
 }
 
 /* ─── Game Arena ──────────────────────────────────────────────────────────── */

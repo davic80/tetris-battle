@@ -54,6 +54,7 @@ let MY_CELL, OPP_CELL;   // cell px size
 
 // Settings
 let nextCount = 4;
+let showGhost = true;
 
 // Opponent state (received over WS)
 let oppBoard = null;   // compact string or array
@@ -86,6 +87,10 @@ async function main() {
   p2Name   = sessionStorage.getItem('player2') || (mySlot === 2 ? myName : 'Player 2');
   oppName  = mySlot === 1 ? p2Name : p1Name;
 
+  // Read game options from URL (set by creator on index.html)
+  nextCount = parseInt(params.get('next') || '4');
+  showGhost = params.get('ghost') !== '0';
+
   // Apply saved lang
   const lang = localStorage.getItem('lang') || 'es';
   setLang(lang);
@@ -104,10 +109,6 @@ async function main() {
 
   MY_CELL  = myBoardCanvas.width / BOARD_COLS;   // 20px
   OPP_CELL = oppBoardCanvas.width / BOARD_COLS;  // 13px
-
-  // Next count from select
-  const sel = document.getElementById('next-count');
-  nextCount = parseInt(sel.value);
 
   // Keyboard
   window.addEventListener('keydown', onKeyDown);
@@ -344,18 +345,7 @@ function renderMyBoard() {
   }
 
   // Ghost piece
-  const ghostY = snap.ghost_y;
-  for (const [cx, cy] of snap.current.cells) {
-    const visR = (cy - HIDDEN_ROWS);
-    if (visR >= 0 && visR < VISIBLE_ROWS) {
-      // draw ghost at ghost_y offset
-      const ghostVisR = (ghostY + (cy - snap.current.cells.reduce((acc, [,gy]) => Math.min(acc, gy), Infinity))) - HIDDEN_ROWS;
-      // Simpler: ghost draws at same col, row shifted by (ghostY - current_piece_y)
-      // ghost_y is the final y of the piece origin
-    }
-  }
-  // Recalculate ghost properly:
-  {
+  if (showGhost) {
     const currentCells = snap.current.cells; // absolute [col, row]
     // Find the origin row of current piece (min row in cells)
     const originRow = currentCells.reduce((m, [,r]) => Math.min(m, r), Infinity);
@@ -652,15 +642,6 @@ function showToast(msg) {
   toast.className = 'toast error';
   setTimeout(() => toast.classList.add('hidden'), 3000);
 }
-
-// ─── Settings ──────────────────────────────────────────────────────────────────
-window.changeNextCount = function(val) {
-  nextCount = parseInt(val);
-  if (game) {
-    // Recreate game with new next count (only in waiting state; during game ignore)
-    // Actually apply only before next game
-  }
-};
 
 // ─── Play again / Home ────────────────────────────────────────────────────────
 window.playAgain = function() {

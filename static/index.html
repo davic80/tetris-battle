@@ -24,10 +24,32 @@
       <h2 data-i18n="create_title">Crear partida</h2>
       <p data-i18n="create_desc">Crea una sala y comparte el código con tu rival.</p>
       <input type="text" id="create-name" maxlength="20" placeholder="" data-i18n-placeholder="name_placeholder" />
+
+      <!-- Game options -->
+      <div class="game-options">
+        <div class="option-row">
+          <label for="next-count-select" data-i18n="next_pieces_label">Piezas siguientes:</label>
+          <select id="next-count-select">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="4" selected>4</option>
+          </select>
+        </div>
+        <div class="option-row">
+          <label for="ghost-toggle" data-i18n="ghost_label">Ghost piece (previsualizar caída)</label>
+          <input type="checkbox" id="ghost-toggle" checked class="toggle-check" />
+        </div>
+      </div>
+
       <button class="btn-primary" onclick="createRoom()" data-i18n="create_btn">Crear sala</button>
+
       <div id="room-code-box" class="hidden">
         <p data-i18n="share_code">Comparte este código:</p>
         <div class="code-display" id="code-display"></div>
+        <div class="code-actions">
+          <button class="btn-icon" onclick="copyCode()" id="btn-copy" data-i18n="copy_code_btn">Copiar</button>
+          <button class="btn-icon btn-icon-share" onclick="shareCode()" id="btn-share" data-i18n="share_code_btn">Compartir</button>
+        </div>
         <p class="waiting-msg" data-i18n="waiting_opponent">Esperando al rival...</p>
         <div class="spinner"></div>
       </div>
@@ -52,7 +74,26 @@
     const savedLang = localStorage.getItem('lang') || 'es';
     setLang(savedLang);
 
+    // Restore saved options
+    const savedNext = localStorage.getItem('next_count') || '4';
+    const savedGhost = localStorage.getItem('ghost_piece') !== 'false';
+    document.getElementById('next-count-select').value = savedNext;
+    document.getElementById('ghost-toggle').checked = savedGhost;
+
+    // Persist option changes
+    document.getElementById('next-count-select').addEventListener('change', function() {
+      localStorage.setItem('next_count', this.value);
+    });
+    document.getElementById('ghost-toggle').addEventListener('change', function() {
+      localStorage.setItem('ghost_piece', this.checked ? 'true' : 'false');
+    });
+
     let ws = null;
+    let currentCode = '';
+    let currentSlot = 1;
+    let currentName = '';
+    let currentNext = 4;
+    let currentGhost = true;
 
     function setLang(lang) {
       localStorage.setItem('lang', lang);
@@ -81,6 +122,11 @@
       const lang = localStorage.getItem('lang') || 'es';
       if (!name) { showToast(LANG[lang].error_name); return; }
 
+      currentNext  = parseInt(document.getElementById('next-count-select').value);
+      currentGhost = document.getElementById('ghost-toggle').checked;
+      currentName  = name;
+      currentSlot  = 1;
+
       try {
         const res = await fetch('/api/rooms', {
           method: 'POST',
@@ -90,10 +136,13 @@
         const data = await res.json();
         if (!res.ok) { showToast(data.error || 'Error'); return; }
 
+        currentCode = data.code;
         document.getElementById('code-display').textContent = data.code;
         document.getElementById('room-code-box').classList.remove('hidden');
         document.querySelector('#section-create .btn-primary').disabled = true;
         document.getElementById('create-name').disabled = true;
+        document.getElementById('next-count-select').disabled = true;
+        document.getElementById('ghost-toggle').disabled = true;
 
         connectWS(data.code, name, 1);
       } catch (e) {
@@ -108,7 +157,13 @@
       if (!name) { showToast(LANG[lang].error_name); return; }
       if (code.length !== 6) { showToast(LANG[lang].error_code); return; }
 
-      // Check room exists
+      currentName = name;
+      currentSlot = 2;
+      currentCode = code;
+      // Join uses whatever options are in localStorage (or defaults)
+      currentNext  = parseInt(localStorage.getItem('next_count') || '4');
+      currentGhost = localStorage.getItem('ghost_piece') !== 'false';
+
       try {
         const res = await fetch(`/api/rooms/${code}`);
         const data = await res.json();
@@ -138,18 +193,55 @@
         } else if (msg.type === 'joined') {
           // OK, wait for game_start
         } else if (msg.type === 'game_start') {
-          // Navigate to game
           sessionStorage.setItem('room_code', code);
           sessionStorage.setItem('player_name', name);
           sessionStorage.setItem('player_slot', msg.from_slot || slot);
           sessionStorage.setItem('player1', msg.player1);
           sessionStorage.setItem('player2', msg.player2);
-          ws.close(); // game.html opens its own WS
-          window.location.href = `/game?code=${code}&slot=${slot}&name=${encodeURIComponent(name)}`;
+          ws.close();
+          const ghostParam = currentGhost ? '1' : '0';
+          window.location.href = `/game?code=${code}&slot=${slot}&name=${encodeURIComponent(name)}&next=${currentNext}&ghost=${ghostParam}`;
         }
       };
 
       ws.onerror = () => showToast('WebSocket error');
+    }
+
+    // ─── Copy & Share ─────────────────────────────────────────────────────────
+    function copyCode() {
+      if (!currentCode) return;
+      navigator.clipboard.writeText(currentCode).then(() => {
+        showToast(t('copied_ok'), 'success');
+      }).catch(() => {
+        // fallback: select the element text
+        const el = document.getElementById('code-display');
+        const range = document.createRange();
+        range.selectNode(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        showToast(t('copied_ok'), 'success');
+      });
+    }
+
+    function shareCode() {
+      if (!currentCode) return;
+      const lang = localStorage.getItem('lang') || 'es';
+      const shareData = {
+        title: LANG[lang].share_title,
+        text:  `${LANG[lang].share_text} ${currentCode}`,
+        url:   window.location.origin
+      };
+      if (navigator.share) {
+        navigator.share(shareData).catch(() => {});
+      } else {
+        // Fallback: copy the full share text + URL to clipboard
+        const text = `${shareData.text}\n${shareData.url}`;
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(t('copied_ok'), 'success');
+        }).catch(() => {});
+      }
     }
   </script>
 </body>
