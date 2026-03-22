@@ -36,11 +36,12 @@ pub async fn create_room(
     if name.is_empty() || name.len() > 20 {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error":"invalid name"}))).into_response();
     }
+    // name is stored by the client and used when opening the WebSocket
 
     let code = generate_code();
     let room = Room {
         code: code.clone(),
-        player1: Some(PlayerInfo { name, slot: 1 }),
+        player1: None,
         player2: None,
         state: RoomState::Waiting,
         created_at: Utc::now().to_rfc3339(),
