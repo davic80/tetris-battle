@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-03-22
+
+### Added
+- **In-game music**: 3 chiptune tracks (CC0, by Juhani Junkala / SubspaceAudio from OpenGameArt) rotate automatically during play, starting from a random track each game
+- **Playback speed tied to level**: `playbackRate` starts at 1.0 (level 1) and increases by +0.1 per level (capped at 1.9), ramping smoothly over 500ms on each `level_up` event
+- **Mute button** (🔊/🔇) in the game header; preference persisted in `localStorage`
+
 ## [0.2.2] - 2026-03-22
 
 ### Added

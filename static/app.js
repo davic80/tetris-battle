@@ -73,7 +73,86 @@ let comboCount = 0;
 let comboTimeout = null;
 let flashTimeout = null;
 
-// ─── Init ────────────────────────────────────────────────────────────────────
+// ─── Audio Manager ───────────────────────────────────────────────────────────
+const TRACKS = [
+  '/static/audio/track1.mp3',
+  '/static/audio/track2.mp3',
+  '/static/audio/track3.mp3',
+];
+
+const audio = {
+  el: null,          // current HTMLAudioElement
+  trackIndex: 0,
+  muted: false,
+  targetRate: 1.0,   // desired playbackRate (set by level)
+  _rateRaf: null,    // requestAnimationFrame handle for smooth rate transition
+};
+
+function audioInit() {
+  // Respect saved mute preference
+  const saved = localStorage.getItem('music_muted');
+  if (saved === '1') {
+    audio.muted = true;
+    const btn = document.getElementById('btn-mute');
+    if (btn) btn.textContent = '🔇';
+  }
+}
+
+function audioStart() {
+  if (audio.el) { audio.el.pause(); audio.el = null; }
+  const el = new Audio(TRACKS[audio.trackIndex]);
+  el.loop = false;
+  el.volume = 0.45;
+  el.playbackRate = audio.targetRate;
+  el.muted = audio.muted;
+  el.addEventListener('ended', audioNext);
+  audio.el = el;
+  el.play().catch(() => {}); // ignore autoplay block
+}
+
+function audioNext() {
+  audio.trackIndex = (audio.trackIndex + 1) % TRACKS.length;
+  audioStart();
+}
+
+function audioStop() {
+  if (audio.el) {
+    audio.el.removeEventListener('ended', audioNext);
+    audio.el.pause();
+    audio.el = null;
+  }
+}
+
+/** Called on level_up: smoothly ramp playbackRate to targetRate */
+function audioSetRate(level) {
+  // 1.0 at level 1, +0.1 per level, cap at 1.9
+  audio.targetRate = Math.min(1.0 + (level - 1) * 0.1, 1.9);
+  if (audio.el) {
+    // Smooth ramp over ~500ms using rAF
+    if (audio._rateRaf) cancelAnimationFrame(audio._rateRaf);
+    const startRate = audio.el.playbackRate;
+    const endRate = audio.targetRate;
+    const duration = 500;
+    const startTime = performance.now();
+    function step(now) {
+      if (!audio.el) return;
+      const t = Math.min((now - startTime) / duration, 1);
+      audio.el.playbackRate = startRate + (endRate - startRate) * t;
+      if (t < 1) audio._rateRaf = requestAnimationFrame(step);
+    }
+    audio._rateRaf = requestAnimationFrame(step);
+  }
+}
+
+window.toggleMute = function() {
+  audio.muted = !audio.muted;
+  if (audio.el) audio.el.muted = audio.muted;
+  const btn = document.getElementById('btn-mute');
+  if (btn) btn.textContent = audio.muted ? '🔇' : '🔊';
+  localStorage.setItem('music_muted', audio.muted ? '1' : '0');
+};
+
+
 async function main() {
   await init();
   wasmReady = true;
@@ -94,6 +173,9 @@ async function main() {
   // Apply saved lang
   const lang = localStorage.getItem('lang') || 'es';
   setLang(lang);
+
+  // Init audio preferences (mute state)
+  audioInit();
 
   // Update player name labels
   document.getElementById('my-name').textContent = myName;
@@ -220,6 +302,7 @@ function handleServerMsg(msg) {
         // Reschedule gravity immediately so new speed applies on next tick
         document.getElementById('my-level').textContent = msg.level;
         showCombo(`LEVEL ${msg.level}`);
+        audioSetRate(msg.level);
       }
       break;
 
@@ -260,6 +343,10 @@ function startCountdown() {
 function startGame() {
   game = new GameState(nextCount);
   gameRunning = true;
+  // Start music from a random track
+  audio.trackIndex = Math.floor(Math.random() * TRACKS.length);
+  audio.targetRate = 1.0;
+  audioStart();
   renderMyBoard();
   scheduleGravity();
 }
@@ -621,6 +708,7 @@ function hideOverlay(id) {
 }
 
 function showResultOverlay(win, subtitle) {
+  audioStop();
   const title = document.getElementById('result-title');
   const sub   = document.getElementById('result-subtitle');
   title.textContent = win === true ? t('you_win') : win === false ? t('you_lose') : '...';

@@ -87,6 +87,12 @@ header {
   color: #fff;
 }
 
+.mute-btn {
+  font-size: 14px;
+  padding: 4px 8px;
+  min-width: 34px;
+}
+
 .flag { font-size: 14px; }
 
 /* ─── Lobby ──────────────────────────────────────────────────────────────── */
