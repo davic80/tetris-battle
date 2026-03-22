@@ -130,18 +130,35 @@ async fn handle_socket(socket: WebSocket, code: String, state: Arc<AppState>) {
     }
 
     // Assign slot — lock, compute result, drop lock, then await if needed
-    enum SlotResult { Ok(u8), NotFound, Full }
+    enum SlotResult {
+        New(u8),                          // freshly joined, slot assigned
+        Reconnect(u8, String, String),    // reconnect to in-progress game: (slot, p1, p2)
+        NotFound,
+        Full,
+    }
     let slot_result = {
         let mut rooms = state.rooms.lock().unwrap();
         match rooms.get_mut(&code) {
             None => SlotResult::NotFound,
             Some(room) => {
-                if room.player1.is_none() {
+                // Reconnect: sala ya iniciada y el nombre coincide con un jugador existente
+                if room.state == RoomState::Playing || room.state == RoomState::Ready {
+                    let p1 = room.player1.as_ref().map(|p| p.name.clone()).unwrap_or_default();
+                    let p2 = room.player2.as_ref().map(|p| p.name.clone()).unwrap_or_default();
+                    if p1 == player_name {
+                        SlotResult::Reconnect(1, p1, p2)
+                    } else if p2 == player_name {
+                        SlotResult::Reconnect(2, p1, p2)
+                    } else {
+                        // Sala en juego pero nombre desconocido → full
+                        SlotResult::Full
+                    }
+                } else if room.player1.is_none() {
                     room.player1 = Some(PlayerInfo { name: player_name.clone(), slot: 1 });
-                    SlotResult::Ok(1u8)
+                    SlotResult::New(1u8)
                 } else if room.player2.is_none() {
                     room.player2 = Some(PlayerInfo { name: player_name.clone(), slot: 2 });
-                    SlotResult::Ok(2u8)
+                    SlotResult::New(2u8)
                 } else {
                     SlotResult::Full
                 }
@@ -149,6 +166,12 @@ async fn handle_socket(socket: WebSocket, code: String, state: Arc<AppState>) {
         }
         // MutexGuard dropped here
     };
+
+    let tx = state.get_or_create_channel(&code);
+    let mut rx = tx.subscribe();
+
+    // Extraer is_new antes de consumir slot_result
+    let is_new = matches!(slot_result, SlotResult::New(_));
 
     let slot = match slot_result {
         SlotResult::NotFound => {
@@ -163,37 +186,58 @@ async fn handle_socket(socket: WebSocket, code: String, state: Arc<AppState>) {
             )).await;
             return;
         }
-        SlotResult::Ok(s) => s,
+        SlotResult::Reconnect(s, p1, p2) => {
+            // Confirmar unión
+            let welcome = serde_json::json!({
+                "type": "joined",
+                "slot": s,
+                "name": player_name,
+                "code": code
+            });
+            if sender.send(Message::Text(welcome.to_string())).await.is_err() {
+                return;
+            }
+            // Reenviar game_start directamente a este socket (sin broadcast)
+            let start_msg = serde_json::json!({
+                "type": "game_start",
+                "player1": p1,
+                "player2": p2
+            });
+            if sender.send(Message::Text(start_msg.to_string())).await.is_err() {
+                return;
+            }
+            s
+        }
+        SlotResult::New(s) => s,
     };
 
-    let tx = state.get_or_create_channel(&code);
-    let mut rx = tx.subscribe();
+    // Para slots nuevos: confirmar unión y comprobar si ya están los dos
+    if is_new {
+        let welcome = serde_json::json!({
+            "type": "joined",
+            "slot": slot,
+            "name": player_name,
+            "code": code
+        });
+        if sender.send(Message::Text(welcome.to_string())).await.is_err() {
+            return;
+        }
 
-    // Notify this player of their slot
-    let welcome = serde_json::json!({
-        "type": "joined",
-        "slot": slot,
-        "name": player_name,
-        "code": code
-    });
-    if sender.send(Message::Text(welcome.to_string())).await.is_err() {
-        return;
-    }
-
-    // Check if both players are now connected
-    {
-        let mut rooms = state.rooms.lock().unwrap();
-        if let Some(room) = rooms.get_mut(&code) {
-            if room.player1.is_some() && room.player2.is_some() && room.state == RoomState::Waiting {
-                room.state = RoomState::Playing;
-                let p1 = room.player1.as_ref().unwrap().name.clone();
-                let p2 = room.player2.as_ref().unwrap().name.clone();
-                let start_msg = serde_json::json!({
-                    "type": "game_start",
-                    "player1": p1,
-                    "player2": p2
-                });
-                let _ = tx.send(start_msg.to_string());
+        // Comprobar si ambos jugadores ya están conectados → broadcast game_start
+        {
+            let mut rooms = state.rooms.lock().unwrap();
+            if let Some(room) = rooms.get_mut(&code) {
+                if room.player1.is_some() && room.player2.is_some() && room.state == RoomState::Waiting {
+                    room.state = RoomState::Playing;
+                    let p1 = room.player1.as_ref().unwrap().name.clone();
+                    let p2 = room.player2.as_ref().unwrap().name.clone();
+                    let start_msg = serde_json::json!({
+                        "type": "game_start",
+                        "player1": p1,
+                        "player2": p2
+                    });
+                    let _ = tx.send(start_msg.to_string());
+                }
             }
         }
     }
