@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-03-22
+
+### Fixed
+- Game-over overlay: replaced "Play again" + "Home" buttons with a single "Back to home" button; both previously navigated to `/` which made "Play again" misleading
+- Piece spawn position: pieces now appear at the top of the visible board (spawn `y` changed from 0 to 3) so the active piece is always visible from the first frame
+
+### Added
+- Version footer (`v0.2.1`) on both lobby and game pages
+
 ## [0.2.0] - 2026-03-22
 
 ### Added

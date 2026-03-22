@@ -638,5 +638,15 @@ input[type="text"]:focus {
   .ctrl-btn { width: 48px; height: 46px; font-size: 18px; }
 }
 
+/* ─── Footer ──────────────────────────────────────────────────────────────── */
+.app-footer {
+  text-align: center;
+  padding: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
 /* ─── Utility ─────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }

@@ -28,7 +28,7 @@ impl Piece {
             piece_type: pt,
             rotation: 0,
             x: 3, // center-ish spawn
-            y: 0, // spawn at top of board (hidden area)
+            y: 3, // spawn so top row of piece is at first visible row (row 4)
             cells,
         }
     }
