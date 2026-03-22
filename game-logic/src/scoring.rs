@@ -7,6 +7,8 @@ pub struct Scoring {
     b2b: bool, // back-to-back (consecutive Tetris/T-spin)
     pending_attack: u32,
     gravity_counter: u32,
+    /// Minimum level enforced by the server (shared global level)
+    min_level: u32,
 }
 
 impl Scoring {
@@ -19,6 +21,7 @@ impl Scoring {
             b2b: false,
             pending_attack: 0,
             gravity_counter: 0,
+            min_level: 1,
         }
     }
 
@@ -38,7 +41,7 @@ impl Scoring {
         }
         self.combo += 1;
         self.lines += lines;
-        self.level = (self.lines / 10) + 1;
+        self.level = ((self.lines / 10) + 1).max(self.min_level);
 
         let is_difficult = lines == 4; // Tetris
         let b2b_bonus = if is_difficult && self.b2b { 1 } else { 0 };
@@ -99,5 +102,17 @@ impl Scoring {
     /// Advance gravity timer. Returns true if piece should fall
     pub fn tick(&mut self) -> bool {
         false // Gravity is handled by JS timer
+    }
+
+    /// Override level from server (shared global level).
+    /// Raises both the current level and the minimum so local clears never go below it.
+    pub fn set_level(&mut self, level: u32) {
+        let l = level.max(1);
+        if l > self.level {
+            self.level = l;
+        }
+        if l > self.min_level {
+            self.min_level = l;
+        }
     }
 }

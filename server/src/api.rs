@@ -45,6 +45,9 @@ pub async fn create_room(
         player2: None,
         state: RoomState::Waiting,
         created_at: Utc::now().to_rfc3339(),
+        p1_lines: 0,
+        p2_lines: 0,
+        global_level: 1,
     };
 
     {
@@ -276,6 +279,13 @@ async fn handle_socket(socket: WebSocket, code: String, state: Arc<AppState>) {
                             handle_game_over(&val, &code_clone, &state_clone, &tx_clone).await;
                         }
 
+                        // Handle board_update: accumulate lines, broadcast level_up if needed
+                        if msg_type == "board_update" {
+                            if let Some(lines_val) = val.get("lines").and_then(|v| v.as_u64()) {
+                                handle_lines_update(lines_val as u32, slot, &code_clone, &state_clone, &tx_clone);
+                            }
+                        }
+
                         let _ = tx_clone.send(val.to_string());
                     }
                 }
@@ -351,6 +361,34 @@ async fn handle_game_over(
     let mut rooms = state.rooms.lock().unwrap();
     if let Some(room) = rooms.get_mut(code) {
         room.state = crate::room::RoomState::Finished;
+    }
+}
+
+fn handle_lines_update(
+    lines: u32,
+    from_slot: u8,
+    code: &str,
+    state: &Arc<AppState>,
+    tx: &tokio::sync::broadcast::Sender<String>,
+) {
+    let mut rooms = state.rooms.lock().unwrap();
+    if let Some(room) = rooms.get_mut(code) {
+        // Update per-player line count (use the absolute value sent by client)
+        if from_slot == 1 {
+            room.p1_lines = lines;
+        } else {
+            room.p2_lines = lines;
+        }
+        let total = room.p1_lines + room.p2_lines;
+        let new_level = (total / 10) + 1;
+        if new_level > room.global_level {
+            room.global_level = new_level;
+            let level_msg = serde_json::json!({
+                "type": "level_up",
+                "level": new_level
+            });
+            let _ = tx.send(level_msg.to_string());
+        }
     }
 }
 

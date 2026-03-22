@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-03-22
+
+### Added
+- **Shared global level**: both players now experience the same increasing difficulty. Every 10 lines cleared across both boards (combined total) raises the level by 1 for both players simultaneously.
+  - Server (`room.rs`): `Room` tracks `p1_lines`, `p2_lines`, and `global_level`
+  - Server (`api.rs`): intercepts `board_update` messages, accumulates total lines, and broadcasts `level_up` when the threshold is crossed
+  - WASM (`scoring.rs`): new `set_level()` method that overrides the local level and sets a floor so subsequent line clears never drop below the server-dictated level
+  - WASM (`lib.rs`): `set_level()` exposed via `#[wasm_bindgen]`
+  - Client (`app.js`): `board_update` now includes `lines`; new `level_up` handler calls `game.set_level()`, updates the HUD, and shows a `LEVEL N` combo flash
+
 ## [0.2.1] - 2026-03-22
 
 ### Fixed

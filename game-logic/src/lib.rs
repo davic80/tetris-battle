@@ -1,10 +1,10 @@
-use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
 mod board;
+mod garbage;
 mod piece;
 mod scoring;
-mod garbage;
 
 pub use board::Board;
 pub use piece::{Piece, PieceType};
@@ -254,6 +254,12 @@ impl GameState {
         self.scoring.gravity_ms()
     }
 
+    /// Set level from server broadcast (shared global level)
+    #[wasm_bindgen]
+    pub fn set_level(&mut self, level: u32) {
+        self.scoring.set_level(level);
+    }
+
     #[wasm_bindgen]
     pub fn snapshot(&self) -> JsValue {
         let ghost_y = self.compute_ghost_y();
@@ -262,7 +268,9 @@ impl GameState {
             cells: self.current_piece.absolute_cells(),
             color: self.current_piece.piece_type as u8 + 1,
         };
-        let next: Vec<PieceSnapshot> = self.next_pieces.iter()
+        let next: Vec<PieceSnapshot> = self
+            .next_pieces
+            .iter()
             .take(self.next_count as usize)
             .map(|pt| {
                 let p = Piece::new(*pt);

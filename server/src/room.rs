@@ -13,6 +13,12 @@ pub struct Room {
     pub player2: Option<PlayerInfo>,
     pub state: RoomState,
     pub created_at: String,
+    /// Lines cleared by player 1 this game
+    pub p1_lines: u32,
+    /// Lines cleared by player 2 this game
+    pub p2_lines: u32,
+    /// Current shared global level (starts at 1, increases every 10 total lines)
+    pub global_level: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

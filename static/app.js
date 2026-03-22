@@ -214,6 +214,15 @@ function handleServerMsg(msg) {
       }
       break;
 
+    case 'level_up':
+      if (game) {
+        game.set_level(msg.level);
+        // Reschedule gravity immediately so new speed applies on next tick
+        document.getElementById('my-level').textContent = msg.level;
+        showCombo(`LEVEL ${msg.level}`);
+      }
+      break;
+
     case 'error':
       showToast(msg.msg || 'Error');
       break;
@@ -307,6 +316,7 @@ function broadcastBoard() {
     board: compact,
     score: game.get_score(),
     level: game.get_level(),
+    lines: game.get_lines(),
   });
 }
 
