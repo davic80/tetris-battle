@@ -654,5 +654,16 @@ input[type="text"]:focus {
   flex-shrink: 0;
 }
 
+.app-footer a {
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.app-footer a:hover {
+  color: var(--accent);
+  opacity: 1;
+}
+
 /* ─── Utility ─────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }

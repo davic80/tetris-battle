@@ -152,6 +152,19 @@ window.toggleMute = function() {
   localStorage.setItem('music_muted', audio.muted ? '1' : '0');
 };
 
+/**
+ * Unlock the browser audio subsystem using a silent AudioContext.
+ * Must be called from within a direct user-gesture event handler.
+ * After this, HTMLAudioElement.play() works even inside setTimeout chains.
+ */
+function audioUnlock() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Resume immediately (needed on iOS/Safari)
+    ctx.resume().then(() => ctx.close()).catch(() => {});
+  } catch (_) {}
+}
+
 
 async function main() {
   await init();
@@ -323,6 +336,13 @@ function startCountdown() {
   showOverlay('overlay-countdown');
   let count = 3;
   document.getElementById('countdown-num').textContent = count;
+
+  // Unlock audio subsystem on the first user gesture during countdown.
+  // This allows HTMLAudioElement.play() to succeed from inside setTimeout later.
+  const unlockHandler = () => audioUnlock();
+  document.addEventListener('keydown',     unlockHandler, { once: true, capture: true });
+  document.addEventListener('pointerdown', unlockHandler, { once: true, capture: true });
+  document.addEventListener('touchstart',  unlockHandler, { once: true, capture: true });
 
   const iv = setInterval(() => {
     count--;
